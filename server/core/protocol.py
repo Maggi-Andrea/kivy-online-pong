@@ -86,8 +86,9 @@ class PlayerPad(object):
 
 class PongMatch(object):
 
-  def __init__(self, player1):
-    self.player1 = player1
+  def __init__(self):
+    self.player1 = None
+    self.player2 = None
     self.player1_score = 0
     self.player2_score = 0
 
@@ -95,9 +96,25 @@ class PongMatch(object):
     self.ball.match = self
 
     self.last_time = 0
+    
+  def add_player(self, player):
+    if not self.player1:
+      self.player1 = player
+    else:
+      self.player2 = player
+      
+  def ready_to_start(self):
+    return self.player1 is not None and self.player2 is not None
+      
 
   def start(self):
     print("A MATCH STARTED")
+    self.player1.enemy = self.player2
+    self.player2.enemy = self.player1
+    
+    self.player1.transport.write(f'ename:{self.player2.name}_'.encode())
+    self.player2.transport.write(f'ename:{self.player1.name}_'.encode())
+    
     data = 'match is starting_'.encode()
     self.player1.transport.write(data)
     self.player2.transport.write(data)
@@ -181,18 +198,10 @@ class GameServerProtocol(protocol.Protocol):
       print('wtf')
 
   def find_match(self):
-    if len(self.factory.looking_for_opponent) == 0:
-      self.match = PongMatch(self)
-      self.factory.looking_for_opponent.append(self.match)
-    else:
-      self.match = self.factory.looking_for_opponent.pop()
-      self.match.player2 = self
-      self.enemy = self.match.player1
-      self.enemy.transport.write(f'ename:{self.name}_'.encode())
-      self.transport.write(f'ename:{self.enemy.name}_'.encode())
-      self.match.player1.enemy = self
-      self.match.start()
-      self.factory.online_matches.append(self.match)
+    self.match = self.factory.get_match()
+    self.match.add_player(self)
+    self.factory.start_match(self.match)
+    
 
   def update_match(self, data):
     data = data.split('_')
