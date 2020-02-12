@@ -104,7 +104,7 @@ class PongApp(App):
         return self.layout
 
     def connect_to_server(self):
-        reactor.connectTCP('192.168.1.36', 8000, GameNetworkFactory(self))
+        reactor.connectTCP('127.0.0.1', 8000, GameNetworkFactory(self))
 
     def on_connection(self, connection):
         self.connection = connection
